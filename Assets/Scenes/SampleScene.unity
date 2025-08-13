@@ -471,8 +471,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointPrefab: {fileID: 4619100611412680496, guid: 089734219532f4d409958accaef177dd, type: 3}
-  gridSize: 100
-  octaves: 3
+  gridSize: 150
+  octaves: 1
+  scale: 2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

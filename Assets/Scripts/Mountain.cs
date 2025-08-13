@@ -3,7 +3,8 @@ public class Mountain : MonoBehaviour
 {
     [SerializeField] Transform pointPrefab;
     [SerializeField] int gridSize = 360;
-    [SerializeField] int octaves = 10;
+    [SerializeField, Range(1,12)] int octaves = 10;
+    [SerializeField, Range(1, 10)] int scale = 1;
     float[,] map;
     Vector2[,] vectors;
 
@@ -42,12 +43,11 @@ public class Mountain : MonoBehaviour
                     amplitude /= 2;
                 }
 
-                value *= 1.5f;
                 if (value < -1.0f)
                 {
                     value = -1.0f;
                 }
-                value = (value + 1.0f) / 2.0f * 100;
+                value = (value + 1.0f) / 2.0f * 100 * scale;
 
                 map[x,y] = value;
             }
