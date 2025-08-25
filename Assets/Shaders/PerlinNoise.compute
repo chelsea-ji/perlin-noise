@@ -1,0 +1,123 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel PerlinKernel
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<float3> _Positions;
+
+uint _Resolution, _Octaves, _Frequency, _Amplitude;
+float _Step;
+
+float RandomAngle(uint x, uint y)
+{
+    uint w = 8 * 32;
+    const uint s = w / 2;
+    uint a = x;
+    uint b = y;
+    
+    a *= 3284157443;
+    
+    b ^= (a << s) | (a >> (w - s));
+    b *= 1911520717;
+    
+    a ^= (b << s) | (b >> (w - s));
+    a *= 2048419325;
+    
+    float r = a * (3.14159265 / 2147483647.0);
+    return r;
+}
+
+float Fade(float t)
+{
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+float DotGradient(float2 influence, uint x0, uint y0, float x, float y)
+{
+    float2 distance = float2(x - x0, y - y0);
+    return dot(influence, distance);
+}
+
+float Perlin(float x, float y)
+{
+    // calculate corners of the grid cell the point is located in
+    int x0 = (int) x;
+    int y0 = (int) y;
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+    
+    float angle = RandomAngle(x0, y0);
+    float2 vect0 = float2(cos(angle), sin(angle));
+    
+    angle = RandomAngle(x1, y0);
+    float2 vect1 = float2(cos(angle), sin(angle));
+    
+    angle = RandomAngle(x0, y1);
+    float2 vect2 = float2(cos(angle), sin(angle));
+    
+    angle = RandomAngle(x1, y1);
+    float2 vect3 = float2(cos(angle), sin(angle));
+    
+    // horizontal and vertical weights (distance between point and upper left corner)
+    float hw = x - x0;
+    float vw = y - y0;
+
+    hw = Fade(hw);
+    vw = Fade(vw);
+
+    // dot products for upper two corners
+    float dot0 = DotGradient(vect0, x0, y0, x, y);
+    float dot1 = DotGradient(vect1, x1, y0, x, y);
+    float i0 = lerp(dot0, dot1, hw);
+
+    // dot products for bottom two corners
+    dot0 = DotGradient(vect2, x0, y1, x, y);
+    dot1 = DotGradient(vect3, x1, y1, x, y);
+    float i1 = lerp(dot0, dot1, hw);
+
+    float value = lerp(i0, i1, vw);
+
+    return value;
+}
+
+float Noise(float u, float v)
+{
+    float frequency = 1.0;
+    float amplitude = 1.0;
+
+    float p = 0.0;
+    
+    for (uint k = 0; k < _Octaves; k++)
+    {
+        p += Perlin(u * frequency, v * frequency) * amplitude;
+
+        frequency *= _Frequency;
+        amplitude /= _Amplitude;
+    }
+    
+    return p;
+}
+
+float2 GetUV(uint3 id)
+{
+    return (id.xy + 0.5) * _Step;
+}
+
+void SetPosition(uint3 id, float3 position)
+{
+    if (id.x < _Resolution && id.y < _Resolution)
+    {
+        _Positions[id.x + id.y * _Resolution] = position; 
+    }
+
+}
+
+#define KERNEL_FUNCTION() \
+    [numthreads(8, 8, 1)] \
+    void Perlin##Kernel(uint3 id : SV_DispatchThreadID) { \
+        float2 uv = GetUV(id); \
+        SetPosition(id, float3(uv.x, Noise(uv.x, uv.y), uv.y)); \
+    }
+
+KERNEL_FUNCTION()
+
