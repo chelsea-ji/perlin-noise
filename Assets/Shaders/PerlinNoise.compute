@@ -1,12 +1,18 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel PerlinKernel
+#pragma kernel NoneKernel
+#pragma kernel TimeKernel
+#pragma kernel OctavesKernel
+#pragma kernel FrequencyKernel
+#pragma kernel AmplitudeKernel
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWStructuredBuffer<float3> _Positions;
 
 uint _Resolution, _Octaves, _Frequency, _Amplitude;
-float _Step;
+float _Step, _Time;
+
+#define PI 3.14159265358979323846
 
 float RandomAngle(uint x, uint y)
 {
@@ -80,7 +86,7 @@ float Perlin(float x, float y)
     return value;
 }
 
-float Noise(float u, float v)
+float Noise(float u, float v, float t)
 {
     float frequency = 1.0;
     float amplitude = 1.0;
@@ -95,7 +101,7 @@ float Noise(float u, float v)
         amplitude /= _Amplitude;
     }
     
-    return p;
+    return p * t;
 }
 
 float2 GetUV(uint3 id)
@@ -112,12 +118,16 @@ void SetPosition(uint3 id, float3 position)
 
 }
 
-#define KERNEL_FUNCTION() \
+#define KERNEL_FUNCTION(function, t) \
     [numthreads(8, 8, 1)] \
-    void Perlin##Kernel(uint3 id : SV_DispatchThreadID) { \
+    void function##Kernel(uint3 id : SV_DispatchThreadID) { \
         float2 uv = GetUV(id); \
-        SetPosition(id, float3(uv.x, Noise(uv.x, uv.y), uv.y)); \
+        SetPosition(id, float3(uv.x, Noise(uv.x, uv.y, t), uv.y)); \
     }
 
-KERNEL_FUNCTION()
+KERNEL_FUNCTION(None, 1);
+KERNEL_FUNCTION(Time, sin(_Time));
+KERNEL_FUNCTION(Octaves, 1);
+KERNEL_FUNCTION(Frequency, 1);
+KERNEL_FUNCTION(Amplitude, 1)
 

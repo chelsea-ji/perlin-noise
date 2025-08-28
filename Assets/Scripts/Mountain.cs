@@ -1,15 +1,18 @@
+using System;
 using UnityEngine;
 public class Mountain : MonoBehaviour
 {
     const int maxResolution = 1000;
+    public enum FunctionName { None, Time, Octaves, Frequency, Amplitude }
 
     [SerializeField] ComputeShader computeShader;
     [SerializeField] Mesh mesh;
     [SerializeField] Material material;
     [SerializeField, Range(10, maxResolution)] int resolution = 500;
-    [SerializeField, Range(1, 12)] int octaves = 3;
+    [SerializeField, Range(1, 10)] int octaves = 3;
     [SerializeField, Range(2, 10)] int frequency = 4;
     [SerializeField, Range(2, 10)] int amplitude = 4;
+    [SerializeField] FunctionName cycle;
 
     ComputeBuffer positionsBuffer;
     static readonly int
@@ -18,7 +21,8 @@ public class Mountain : MonoBehaviour
         octavesId = Shader.PropertyToID("_Octaves"),
         stepId = Shader.PropertyToID("_Step"),
         frequencyId = Shader.PropertyToID("_Frequency"),
-        amplitudeId = Shader.PropertyToID("_Amplitude");
+        amplitudeId = Shader.PropertyToID("_Amplitude"),
+        timeId = Shader.PropertyToID("_Time");
 
     private void OnEnable()
     {
@@ -33,16 +37,32 @@ public class Mountain : MonoBehaviour
     private void Update()
     {
         float step = 2f / resolution;
+        int kernelIndex = (int)cycle;
         computeShader.SetInt(resolutionId, resolution);
+        
+        if (kernelIndex == 2)
+        {
+            octaves = Mathf.RoundToInt((Mathf.Sin(Time.time) * 9f / 2f + 11f / 2f));
+        }
+        else if (kernelIndex == 3)
+        {
+            frequency = Mathf.RoundToInt(Mathf.Sin(Time.time) * 4f + 6f);
+            octaves = 2;
+        }
+        else if (kernelIndex == 4)
+        {
+            amplitude = Mathf.RoundToInt(Mathf.Sin(Time.time) * 4f + 6f);
+        }
+
         computeShader.SetInt(octavesId, octaves);
         computeShader.SetInt(frequencyId, frequency);
         computeShader.SetInt(amplitudeId, amplitude); 
         computeShader.SetFloat(stepId, step);
-
-        computeShader.SetBuffer(0, positionsId, positionsBuffer);
+        computeShader.SetFloat(timeId, Time.time);
+        computeShader.SetBuffer(kernelIndex, positionsId, positionsBuffer);
 
         int groups = Mathf.CeilToInt(resolution / 8f);
-        computeShader.Dispatch(0, groups, groups, 1);
+        computeShader.Dispatch(kernelIndex, groups, groups, 1);
 
         material.SetBuffer(positionsId, positionsBuffer);
         material.SetFloat(stepId, step);
