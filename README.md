@@ -1,2 +1,2 @@
 # Description
-Unity implementation (C#) of my previous Perlin Noise project (Java), now displayed as 3D terrain made up of cubes. 
+Perlin Noise terrain generator made in Unity using C# and HLSL shaders. Current version uses the Universal Render Pipeline. Meshes are draw procedurally on the GPU with a URP shader graph and calculations are done using a compute shader.
