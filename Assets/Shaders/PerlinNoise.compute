@@ -4,34 +4,17 @@
 #pragma kernel OctavesKernel
 #pragma kernel FrequencyKernel
 #pragma kernel AmplitudeKernel
+#pragma kernel SeedsKernel
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWStructuredBuffer<float3> _Positions;
+RWStructuredBuffer<uint> _Hashes;
 
 uint _Resolution, _Octaves, _Frequency, _Amplitude;
 float _Step, _Time;
 
 #define PI 3.14159265358979323846
-
-float RandomAngle(uint x, uint y)
-{
-    uint w = 8 * 32;
-    const uint s = w / 2;
-    uint a = x;
-    uint b = y;
-    
-    a *= 3284157443;
-    
-    b ^= (a << s) | (a >> (w - s));
-    b *= 1911520717;
-    
-    a ^= (b << s) | (b >> (w - s));
-    a *= 2048419325;
-    
-    float r = a * (3.14159265 / 2147483647.0);
-    return r;
-}
 
 float Fade(float t)
 {
@@ -44,6 +27,11 @@ float DotGradient(float2 influence, uint x0, uint y0, float x, float y)
     return dot(influence, distance);
 }
 
+float degToRadians(uint degrees)
+{
+    return degrees * (PI / 180.0);
+}
+
 float Perlin(float x, float y)
 {
     // calculate corners of the grid cell the point is located in
@@ -52,16 +40,16 @@ float Perlin(float x, float y)
     int x1 = x0 + 1;
     int y1 = y0 + 1;
     
-    float angle = RandomAngle(x0, y0);
+    float angle = degToRadians((_Hashes[y0 + (x0 * _Resolution)]) * 1.0 / 360.0);
     float2 vect0 = float2(cos(angle), sin(angle));
     
-    angle = RandomAngle(x1, y0);
+    angle = degToRadians((_Hashes[y0 + (x1 * _Resolution)]) * 1.0 / 360.0);
     float2 vect1 = float2(cos(angle), sin(angle));
     
-    angle = RandomAngle(x0, y1);
+    angle = degToRadians((_Hashes[y1 + (x0 * _Resolution)]) * 1.0 / 360.0);
     float2 vect2 = float2(cos(angle), sin(angle));
     
-    angle = RandomAngle(x1, y1);
+    angle = degToRadians((_Hashes[y1 + (x1 * _Resolution)]) * 1.0 / 360.0);
     float2 vect3 = float2(cos(angle), sin(angle));
     
     // horizontal and vertical weights (distance between point and upper left corner)
@@ -115,7 +103,6 @@ void SetPosition(uint3 id, float3 position)
     {
         _Positions[id.x + id.y * _Resolution] = position; 
     }
-
 }
 
 #define KERNEL_FUNCTION(function, t) \
@@ -130,4 +117,5 @@ KERNEL_FUNCTION(Time, sin(_Time));
 KERNEL_FUNCTION(Octaves, 1);
 KERNEL_FUNCTION(Frequency, 1);
 KERNEL_FUNCTION(Amplitude, 1)
+KERNEL_FUNCTION(Seeds, 1);
 
